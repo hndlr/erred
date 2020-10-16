@@ -3,7 +3,7 @@ var assert = require('assert')
 
 var express = require('express')
 var request = require('supertest')
-var { InternalServerError, NoContent, PermanentRedirect, UnprocessableEntity } = require('@harrytwright/erred')
+var { InternalServerError, NoContent, PermanentRedirect, UnprocessableEntity } = require('@hndlr/errors')
 
 var erred = require('../src')
 

@@ -1,5 +1,5 @@
 const _ = require('statuses')
-const errors = require('@harrytwright/erred')
+const errors = require('@hndlr/errors')
 
 /**
  * @callback MiddlewareCallback

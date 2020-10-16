@@ -15,7 +15,7 @@
   "author": "Harry Wright",
   "license": "ISC",
   "dependencies": {
-    "@harrytwright/erred": "^3.0.0-beta.5",
+    "@hndlr/errors": "^0.0.1-beta.1",
     "statuses": "^2.0.0"
   },
   "devDependencies": {
