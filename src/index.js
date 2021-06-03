@@ -5,7 +5,7 @@ const errors = require('@hndlr/errors')
  * @callback MiddlewareCallback
  *
  * @param {Error} err
- * @return {Error}
+ * @return {Error|null}
  * */
 
 /**
@@ -48,8 +48,8 @@ const defaultPlugin = (err) => {
  * 'Internal Server Error' the underlying error is
  * important
  *
- * @param {errors.AnyHTTPError|Error} error
- * @param {errors.AnyHTTPError|Error} error.underlyingError
+ * @param {Error} error
+ * @param {Error} error.underlyingError
  * @param {Object} errorObject
  * @private
  * */
@@ -69,6 +69,14 @@ exports = module.exports = createMiddleware
  * @param {boolean} options.stack - Show the error stack in the JSON object
  * */
 function createMiddleware (options = { stack: isProduction() }) {
+  /**
+   * Express middleware
+   *
+   * @param {Error} err
+   * @param {module:http.ClientRequest} req
+   * @param {module:http.IncomingMessage} res
+   * @param {Function} next
+   * */
   const erred = function (err, req, res, next) {
     erred.handleError(...arguments)
   }
@@ -76,7 +84,6 @@ function createMiddleware (options = { stack: isProduction() }) {
   /**
    * @private
    * */
-
   erred.stack = [defaultPlugin]
 
   /**
@@ -169,10 +176,10 @@ function createMiddleware (options = { stack: isProduction() }) {
 /**
  * Turn the error's into the JSON object
  *
- * @param {number} depth
- * @param {Error|errors.AnyHTTPError|Error[]} error -
- * @param {Error|Error[]} error.underlyingError
- * @param {Object} error.meta
+ * @param {number} depth -
+ * @param {Error|Error[]} error -
+ * @param {Error|Error[]} error.underlyingError -
+ * @param {Object} error.meta -
  * */
 function breakdownErrorToObject (error, depth = 0) {
   if (Array.isArray(error)) {
