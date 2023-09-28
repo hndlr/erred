@@ -21,7 +21,7 @@ function isProduction (): boolean {
   return process.env.NODE_ENV === 'production'
 }
 
-export type Plugin = ((this: { errors: typeof errors }, err: Error) => errors.HTTPError | undefined)
+export type Plugin = ((this: { errors: typeof errors }, err: Error, req: Request) => errors.HTTPError | undefined)
 
 /**
  * Workaround for now
@@ -114,7 +114,7 @@ export default function createMiddleware (options?: Partial<ErredOptions>) {
      * */
     while (match !== true && idx < stack.length) {
       layer = stack[idx++]
-      error = layer.call({ errors }, err)
+      error = layer.call({ errors }, err, req)
 
       if (error && error instanceof errors.HTTPError) {
         match = true
