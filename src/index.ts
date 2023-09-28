@@ -50,8 +50,8 @@ export interface ErredOptions {
  * @param {boolean} options.stack - Show the error stack in the JSON object
  * @param {boolean} options.default500 - Convert a default error to a 500
  * */
-export default function createMiddleware (options: Partial<ErredOptions>) {
-  options = Object.assign({ stack: !isProduction(), default500: false, formatter: format }, options)
+export default function createMiddleware (options?: Partial<ErredOptions>) {
+  const opts = Object.assign({ stack: !isProduction(), default500: false, formatter: format }, options)
 
   /**
    * Express middleware
@@ -124,11 +124,11 @@ export default function createMiddleware (options: Partial<ErredOptions>) {
     /**
      * Pass this back to the express middleware
      * */
-    if (!match && !options.default500) {
+    if (!match && !opts.default500) {
       return next(err)
     }
 
-    if (options.default500) {
+    if (opts.default500 && !match) {
       error = new errors.InternalServerError(err.message, [err])
     }
 
@@ -146,13 +146,13 @@ export default function createMiddleware (options: Partial<ErredOptions>) {
       /**
        * Break the error down
        * */
-      errorObject = (options.formatter || format)(error!, 0)
+      errorObject = (opts.formatter || format)(error!, 0)
     } catch (err) {
       // If we have our own error best to throw back a 500
       error = new errors.InternalServerError('Failed to parse an error object', [err as Error])
-      errorObject = (options.formatter || format)(error, 0)
+      errorObject = (opts.formatter || format)(error, 0)
     }
-    if (options.stack) errorObject.stack = err.stack
+    if (opts.stack) errorObject.stack = err.stack
 
     /**
      * Pass back to the user
