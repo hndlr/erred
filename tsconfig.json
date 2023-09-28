@@ -1,0 +1,12 @@
+{
+  "extends": "@tsconfig/node14/tsconfig.json",
+  "compilerOptions": {
+    "stripInternal": true,
+    "strictPropertyInitialization": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "outDir": "dist"
+  },
+  "include": ["src/**/*"]
+}
