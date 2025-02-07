@@ -16,7 +16,7 @@
     "prepublishOnly": "npm run build",
     "postpublish": "npm run clean",
     "clean": "rm -rf ./dist",
-    "lint": "npx standard ./src --fix"
+    "lint": "npx ts-standard ./src --fix"
   },
   "keywords": [
     "express",

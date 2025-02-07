@@ -1,6 +1,7 @@
 import * as _ from 'statuses'
 import * as errors from '@hndlr/errors'
 import type { Request, Response, NextFunction } from 'express'
+import type { HTTPError } from '@hndlr/errors'
 
 /**
  * Module variables.
@@ -21,7 +22,17 @@ function isProduction (): boolean {
   return process.env.NODE_ENV === 'production'
 }
 
+type NonFunctionKeyNames<T> = Exclude<{
+  [key in keyof T]: T[key] extends Function ? never : key;
+}[keyof T], undefined>
+
+type RemoveFunctions<T> = Pick<T, NonFunctionKeyNames<T>>
+
 export type Plugin = ((this: { errors: typeof errors }, err: Error, req: Request) => errors.HTTPError | undefined)
+
+export type Integration =
+  | ((err: HTTPError) => void)
+  | ((err: HTTPError, req: Request, res: RemoveFunctions<Response>) => void)
 
 /**
  * Workaround for now
@@ -38,11 +49,19 @@ const defaultPlugin: Plugin = (err: Error): errors.HTTPError | undefined => {
 
 export interface ErredOptions {
 
+  // Allow the stack to be outputted to JSON
   stack: boolean
 
+  // Set if we cover all errors in an HTTP Error, anything not matched will be set as an 500 error
   default500: boolean
 
+  // Set the formatter to be used for format the Error to JSON
   formatter: Formatter
+
+  // Callbacks to be called before we send the response, maybe to log the error to the console,
+  // maybe send to sentry too, cannot affect the error as it will have been converted to a JSON
+  // object prior to the calls
+  integrations: Integration[]
 }
 
 /**
@@ -64,7 +83,6 @@ export default function createMiddleware (options?: Partial<ErredOptions>) {
   const erred = function (err: Error, req: Request, res: Response, next: NextFunction) {
     erred.handleError(err, req, res, next)
   }
-
 
   /**
    * @private
@@ -112,11 +130,11 @@ export default function createMiddleware (options?: Partial<ErredOptions>) {
      *
      * We exit on the first match
      * */
-    while (match !== true && idx < stack.length) {
+    while (!match && idx < stack.length) {
       layer = stack[idx++]
       error = layer.call({ errors }, err, req)
 
-      if (error && error instanceof errors.HTTPError) {
+      if ((error != null) && error instanceof errors.HTTPError) {
         match = true
       }
     }
@@ -152,7 +170,12 @@ export default function createMiddleware (options?: Partial<ErredOptions>) {
       error = new errors.InternalServerError('Failed to parse an error object', [err as Error])
       errorObject = (opts.formatter || format)(error, 0)
     }
+
     if (opts.stack) errorObject.stack = err.stack
+
+    if ((opts.integrations != null) && (opts.integrations.length > 0)) {
+      opts.integrations.forEach((integration) => integration(error!, req, { ...res }))
+    }
 
     /**
      * Pass back to the user
@@ -160,7 +183,7 @@ export default function createMiddleware (options?: Partial<ErredOptions>) {
     return res.status(error!.status).json({
       error: errorObject,
       meta: {
-        status: error!.status,
+        status: error!.status
       }
     })
   }
@@ -186,7 +209,7 @@ export type Formatter<ErrorObject extends Record<string, any> = DefaultErrorObje
   | ((error: errors.HTTPError | errors.UnderlyingError | errors.UnderlyingError[]) => ErrorObject | ErrorObject[])
   | ((error: errors.HTTPError | errors.UnderlyingError | errors.UnderlyingError[], depth: number) => ErrorObject | ErrorObject[])
 
-function format(error: errors.HTTPError | errors.UnderlyingError | errors.UnderlyingError[], depth: number = 0): DefaultErrorObject | DefaultErrorObject[] {
+function format (error: errors.HTTPError | errors.UnderlyingError | errors.UnderlyingError[], depth: number = 0): DefaultErrorObject | DefaultErrorObject[] {
   if (depth > 10) {
     throw new RangeError('Unable to process a depth greater than 10')
   }
@@ -206,7 +229,7 @@ function format(error: errors.HTTPError | errors.UnderlyingError | errors.Underl
 
   if ('underlyingError' in error) {
     // Todo: Add a type that covers these, and add the placeholder of error
-    errorObject.errors = format((error as errors.InternalServerError<Error>).underlyingError!, depth+1) as DefaultErrorObject[]
+    errorObject.errors = format((error as errors.InternalServerError<Error>).underlyingError!, depth + 1) as DefaultErrorObject[]
   }
 
   if ('meta' in error) {
@@ -243,3 +266,5 @@ function isEmpty (error: errors.HTTPError): error is errors.EmptyContent {
 function isRedirect (error: errors.HTTPError): error is errors.Redirect {
   return (_.redirect[error.status]) === true
 }
+
+export { format as defaultFormat }
