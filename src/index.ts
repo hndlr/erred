@@ -147,7 +147,8 @@ export default function createMiddleware (options?: Partial<ErredOptions>) {
     }
 
     if (opts.default500 && !match) {
-      error = new errors.InternalServerError(err.message, [err])
+      // Add `cause` for better interpolation w/ Node.js
+      error = Object.assign(new errors.InternalServerError(err.message, [err]), { cause: err })
     }
 
     if (isEmpty(error!)) {
@@ -167,7 +168,7 @@ export default function createMiddleware (options?: Partial<ErredOptions>) {
       errorObject = (opts.formatter || format)(error!, 0)
     } catch (err) {
       // If we have our own error best to throw back a 500
-      error = new errors.InternalServerError('Failed to parse an error object', [err as Error])
+      error = Object.assign(new errors.InternalServerError('Failed to parse an error object', [err as Error]), { cause: err })
       errorObject = (opts.formatter || format)(error, 0)
     }
 
